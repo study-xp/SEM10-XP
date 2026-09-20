@@ -1,6 +1,6 @@
 # SEM 10-XP
 
-A Windows XP–themed Semester 10 study suite — lecture tracker (Surgery/Medicine, 169 lectures) Midterm/Final, weekly planner, Pomodoro timer, weekly goals, and exam countdowns.
+A Windows XP–themed Semester 10 study suite — lecture tracker (Surgery/Medicine, 169 lectures) with Midterm/Final, weekly planner, Pomodoro timer, weekly goals, and exam countdowns.
 
 Local-only. No backend, no accounts, no cloud sync — all data lives in the browser (or the installed app's local storage) on the device you use it on.
 
