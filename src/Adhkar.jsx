@@ -107,7 +107,7 @@ const AYAH_LIST = [
 ];
 
 const SALAWAT = "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ وَعَلَىٰ آلِهِ وَصَحْبِهِ أَجْمَعِينَ";
-const SALAWAT_AUDIO_URL = "https://salawat.com/wp-content/uploads/2026/08/salat-al-nabi-al-ummi-2-audio-1.mp3";
+const SALAWAT_AUDIO_URL = "/sounds/salawat.mp3";
 
 function getSalawatAudio() {
   if (!window.__adhkarSalawatAudio) {
@@ -347,7 +347,7 @@ export function AdhkarBalloonPopup({ intervalMinutes = 10, fireImmediately = fal
           tag: "adhkar-reminder",
           renotify: true,
           requireInteraction: !!settings.pinned,
-          icon: "/SEM10-XP-legacy/pwa-192x192.png"
+          icon: "/SEM10-XP/icons/icon-192.png"
         });
       }
       if (dismissTimer.current) clearTimeout(dismissTimer.current);
