@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, SkipForward, X, Minus, Square, Copy, Check, Search, Volume2, VolumeX, Star, Clock3, Bell, Plus } from "lucide-react";
+import { ADHKAR_APP_ENTRY, AdhkarApp, AdhkarBalloonPopup } from "./Adhkar.jsx";
 
 /* ============================================================================
    DATA
@@ -983,6 +984,7 @@ const APPS = {
   planner: { title: "StudyPlanner.exe", icon: "🗓️", w: 700, h: 600 },
   timer: { title: "FocusTimer.exe", icon: "⏱️", w: 380, h: 610 },
   goals: { title: "WeeklyGoals.exe", icon: "📊", w: 420, h: 560 },
+  adhkar: ADHKAR_APP_ENTRY,
   exams: { title: "ExamSchedule.exe", icon: "📝", w: 640, h: 580 },
 };
 function ClockWidget() {
@@ -1063,7 +1065,7 @@ class SemXPErrorBoundary extends React.Component {
   }
 }
 
-function Sem10XPApp() {
+function Sem10XPApp({ onDesktopReady } = {}) {
   const [progress, setProgress, progressLoaded] = useStoredState("lecture-progress-v2", {});
   const [sessions, setSessions, sessionsLoaded] = useStoredState("pomodoro-sessions", []);
   const [tasks, setTasks, tasksLoaded] = useStoredState("custom-tasks", []);
@@ -1239,6 +1241,16 @@ function Sem10XPApp() {
     return () => clearTimeout(t);
   }, [loggedIn]);
   const ready = preBoot && loggedIn && booted && progressLoaded && sessionsLoaded && settingsLoaded && tasksLoaded && plannerLoaded && examLoaded;
+  useEffect(() => { if (ready && onDesktopReady) onDesktopReady(); }, [ready, onDesktopReady]);
+
+  useEffect(() => {
+    const handler = (event) => {
+      const id = event?.detail?.id;
+      if (id === "adhkar") openApp("adhkar");
+    };
+    window.addEventListener("sem10xp-open-app", handler);
+    return () => window.removeEventListener("sem10xp-open-app", handler);
+  });
 
   const openApp = (key) => {
     setStartMenuOpen(false);
@@ -1268,7 +1280,7 @@ function Sem10XPApp() {
     if (id === "medicine") return <TrackerApp discipline="Medicine" progress={progress} setProgress={setProgress} />;
     if (id === "planner") return <PlannerApp plan={plan} setPlan={setPlan} progress={progress} setProgress={setProgress} startPomForEntry={startPomForEntry} />;
     if (id === "timer") return <TimerApp timer={{ ...timer, secondsLeft }} timerActions={timerActions} settings={settings} setSettings={setSettings} tasks={tasks} addTask={addTask} plan={plan} />;
-    if (id === "goals") return <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} />;
+    if (id === "goals") return {activeApp === "adhkar" ? <AdhkarApp /> : <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} />};
     if (id === "exams") return <ExamApp exams={exams} setExams={setExams} openApp={openApp} />;
     return null;
   };
@@ -1334,9 +1346,11 @@ function Sem10XPApp() {
 }
 
 export default function App() {
+  const [adhkarDesktopReady, setAdhkarDesktopReady] = useState(false);
   return (
     <SemXPErrorBoundary>
-      <Sem10XPApp />
+      <Sem10XPApp onDesktopReady={() => setAdhkarDesktopReady(true)} />
+        {adhkarDesktopReady ? <AdhkarBalloonPopup /> : null}
     </SemXPErrorBoundary>
   );
 }
