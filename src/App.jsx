@@ -1524,7 +1524,7 @@ function Sem10XPApp() {
               <div className="start-menu-footer" onClick={() => setStartMenuOpen(false)}>Close Start Menu</div>
             </div>
           )}
-          <AdhkarBalloonPopup intervalMinutes={10} />
+          {ready && <AdhkarBalloonPopup intervalMinutes={10} />}
 
           <div className="taskbar">
             <button className={cls("start-btn", startMenuOpen && "start-btn-active")} onClick={() => setStartMenuOpen((s) => !s)}><span className="start-btn-logo">⊞</span> start</button>
