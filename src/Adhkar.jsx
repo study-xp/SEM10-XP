@@ -108,6 +108,16 @@ const AYAH_LIST = [
 
 const SALAWAT = "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ وَعَلَىٰ آلِهِ وَصَحْبِهِ أَجْمَعِينَ";
 const SALAWAT_AUDIO_URL = "/SEM10-XP/sounds/%D9%86%D8%BA%D9%85%D8%A9%20%20%D8%B5%D9%84%D9%8A%20%D8%B9%D9%84%D9%89%20%D9%85%D8%AD%D9%85%D8%AF%20%EF%B7%BA%20-%20asem%20as.mp3";
+const POPUP_ALERT_AUDIO_URL = "/SEM10-XP/sounds/Windows%20XP%20Exclamation.wav";
+
+function playPopupAlertSound() {
+  try {
+    const audio = new Audio(POPUP_ALERT_AUDIO_URL);
+    audio.volume = 0.65;
+    const p = audio.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch {}
+}
 
 function getSalawatAudio() {
   if (!window.__adhkarSalawatAudio) {
@@ -336,6 +346,7 @@ export function AdhkarBalloonPopup({ intervalMinutes = 10, fireImmediately = fal
         : pool[rotateIndex.current++ % pool.length];
       setContent(item);
       setVisible(true);
+      playPopupAlertSound();
       if (settings.audio && item.kind === "صلاة على النبي ﷺ") {
         window.setTimeout(() => {
           playSalawatAudio().catch((err) => setAudioError(err?.message || "تعذر تشغيل الصوت"));
