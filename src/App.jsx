@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, SkipForward, X, Minus, Square, Copy, Check, Search, Volume2, VolumeX, Star, Clock3, Bell, Plus } from "lucide-react";
+import { ADHKAR_APP_ENTRY, AdhkarApp } from "./Adhkar.jsx";
 
 /* ============================================================================
    DATA
@@ -983,6 +984,7 @@ const APPS = {
   planner: { title: "StudyPlanner.exe", icon: "🗓️", w: 700, h: 600 },
   timer: { title: "FocusTimer.exe", icon: "⏱️", w: 380, h: 610 },
   goals: { title: "WeeklyGoals.exe", icon: "📊", w: 420, h: 560 },
+  adhkar: ADHKAR_APP_ENTRY,
   exams: { title: "ExamSchedule.exe", icon: "📝", w: 640, h: 580 },
 };
 function ClockWidget() {
