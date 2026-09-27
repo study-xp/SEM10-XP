@@ -1,8 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, SkipForward, X, Minus, Square, Copy, Check, Search, Volume2, VolumeX, Star, Clock3, Bell, Plus } from "lucide-react";
-const ADHKAR_APP_ENTRY = { title: "Adhkar.exe", icon: "📿", w: 460, h: 600 };
-const AdhkarApp = React.lazy(() => import("./Adhkar.jsx").then((m) => ({ default: m.AdhkarApp })));
-const AdhkarBalloonPopup = React.lazy(() => import("./Adhkar.jsx").then((m) => ({ default: m.AdhkarBalloonPopup })));
 
 /* ============================================================================
    DATA
@@ -986,7 +983,6 @@ const APPS = {
   planner: { title: "StudyPlanner.exe", icon: "🗓️", w: 700, h: 600 },
   timer: { title: "FocusTimer.exe", icon: "⏱️", w: 380, h: 610 },
   goals: { title: "WeeklyGoals.exe", icon: "📊", w: 420, h: 560 },
-  adhkar: ADHKAR_APP_ENTRY,
   exams: { title: "ExamSchedule.exe", icon: "📝", w: 640, h: 580 },
 };
 function ClockWidget() {
@@ -1265,11 +1261,6 @@ function Sem10XPApp() {
     setFocusedId(id);
   };
   const startPomForEntry = (entry) => { timerActions.setMode("pomodoro"); timerActions.link("plan:" + entry.id); openApp("timer"); };
-  useEffect(() => {
-    const onOpenAdhkar = (event) => { if (event?.detail?.id === "adhkar") openApp("adhkar"); };
-    window.addEventListener("sem10xp-open-app", onOpenAdhkar);
-    return () => window.removeEventListener("sem10xp-open-app", onOpenAdhkar);
-  }, []);
 
   const renderAppBody = (id) => {
     if (id === "computer") return <OverviewApp progress={progress} openApp={openApp} allData={{ progress, sessions, tasks, plan, exams, settings }} setAllData={{ setProgress, setSessions, setTasks, setPlan, setExams, setSettings }} />;
@@ -1278,7 +1269,6 @@ function Sem10XPApp() {
     if (id === "planner") return <PlannerApp plan={plan} setPlan={setPlan} progress={progress} setProgress={setProgress} startPomForEntry={startPomForEntry} />;
     if (id === "timer") return <TimerApp timer={{ ...timer, secondsLeft }} timerActions={timerActions} settings={settings} setSettings={setSettings} tasks={tasks} addTask={addTask} plan={plan} />;
     if (id === "goals") return <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} />;
-    if (id === "adhkar") return <React.Suspense fallback={<div style={{ padding: 16, fontFamily: "Tahoma, sans-serif" }}>Loading Adhkar.exe…</div>}><AdhkarApp /></React.Suspense>;
     if (id === "exams") return <ExamApp exams={exams} setExams={setExams} openApp={openApp} />;
     return null;
   };
@@ -1306,7 +1296,6 @@ function Sem10XPApp() {
               </div>
             ))}
           </div>
-          <React.Suspense fallback={null}><AdhkarBalloonPopup /></React.Suspense>
           {timer.running && (
             <div className="mini-timer-badge" onClick={() => openApp("timer")}>⏱ {fmtClock(secondsLeft)}</div>
           )}
