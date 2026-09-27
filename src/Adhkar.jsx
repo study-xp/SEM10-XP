@@ -107,7 +107,7 @@ const AYAH_LIST = [
 ];
 
 const SALAWAT = "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى نَبِيِّنَا مُحَمَّدٍ وَعَلَىٰ آلِهِ وَصَحْبِهِ أَجْمَعِينَ";
-const SALAWAT_AUDIO_URL = "/SEM10-XP/sounds/salawat.mp3";
+const SALAWAT_AUDIO_URL = "/SEM10-XP/sounds/%D9%86%D8%BA%D9%85%D8%A9%20%20%D8%B5%D9%84%D9%8A%20%D8%B9%D9%84%D9%89%20%D9%85%D8%AD%D9%85%D8%AF%20%EF%B7%BA%20-%20asem%20as.mp3";
 
 function getSalawatAudio() {
   if (!window.__adhkarSalawatAudio) {
