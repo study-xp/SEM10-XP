@@ -822,7 +822,14 @@ function GoalsApp({ sessions, settings, setSettings, plan, progress }) {
       <XPGroupBox title="WEEKLY PROGRESSION" style={{ marginTop: 10 }}>
         <div className="row-between"><div><strong>LEVEL {String(weekLevel).padStart(2, "0")}</strong><div className="xp-small-text">{weekXP} / {levelBase + 1000} XP this week</div></div><span style={{ fontSize: 20 }}>⚡</span></div>
         <XPProgress pct={levelPct} height={12} />
-        <div className="xp-small-text" style={{ marginTop: 6 }}>🍅 {pomXP} · 🗓 {plannerXP} · ☑ {trackerXP} · 🎯 {goalXP} · daily bonus {dailyXP}</div>
+        <div style={{ marginTop: 7, display: "grid", gap: 4 }}>
+          <div className="row-between"><span className="xp-small-text">🍅 Pomodoros</span><strong className="xp-small-text">{pomXP} XP</strong></div>
+          <div className="row-between"><span className="xp-small-text">🗓 Planner</span><strong className="xp-small-text">{plannerXP} XP</strong></div>
+          <div className="row-between"><span className="xp-small-text">☑ Tracker</span><strong className="xp-small-text">{trackerXP} XP</strong></div>
+          <div className="row-between"><span className="xp-small-text">🎯 Goals</span><strong className="xp-small-text">{goalXP} XP</strong></div>
+          <div className="row-between"><span className="xp-small-text">⭐ Daily bonuses</span><strong className="xp-small-text">{dailyXP} XP</strong></div>
+          <div className="row-between" style={{ marginTop: 3, paddingTop: 5, borderTop: "1px solid #D0CDC0" }}><strong className="xp-small-text">Total XP</strong><strong className="xp-small-text">{weekXP} XP</strong></div>
+        </div>
       </XPGroupBox>
 
       <XPGroupBox title="TODAY'S MISSIONS" style={{ marginTop: 10 }}>
