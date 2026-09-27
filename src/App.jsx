@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, SkipForward, X, Minus, Square, Copy, Check, Search, Volume2, VolumeX, Star, Clock3, Bell, Plus } from "lucide-react";
-import { ADHKAR_APP_ENTRY, AdhkarApp, AdhkarBalloonPopup } from "./Adhkar.jsx";
+const ADHKAR_APP_ENTRY = { title: "Adhkar.exe", icon: "📿", w: 460, h: 600 };
+const AdhkarApp = React.lazy(() => import("./Adhkar.jsx").then((m) => ({ default: m.AdhkarApp })));
+const AdhkarBalloonPopup = React.lazy(() => import("./Adhkar.jsx").then((m) => ({ default: m.AdhkarBalloonPopup })));
 
 /* ============================================================================
    DATA
@@ -118,7 +120,12 @@ function useStoredState(key, initialValue) {
     (async () => {
       try {
         if (HAS_ARTIFACT_STORAGE) {
-          const res = await window.storage.get(key, false);
+          // Some environments expose window.storage but can leave a read pending.
+          // Never let one storage read hold the entire XP shell on the loading screen.
+          const res = await Promise.race([
+            Promise.resolve().then(() => window.storage.get(key, false)),
+            new Promise((resolve) => setTimeout(() => resolve(null), 2500)),
+          ]);
           if (!cancelled && res && res.value) setValue(JSON.parse(res.value));
         } else if (typeof localStorage !== "undefined") {
           const raw = localStorage.getItem(LOCAL_PREFIX + key);
@@ -1473,7 +1480,7 @@ function Sem10XPApp() {
     if (id === "timer") return <TimerApp timer={{ ...timer, secondsLeft }} timerActions={timerActions} settings={settings} setSettings={setSettings} tasks={tasks} addTask={addTask} plan={plan} />;
     if (id === "goals") return <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} plan={plan} progress={progress} />;
     if (id === "exams") return <ExamApp exams={exams} setExams={setExams} openApp={openApp} />;
-    if (id === "adhkar") return <AdhkarApp />;
+    if (id === "adhkar") return <React.Suspense fallback={<div style={{ padding: 16, fontFamily: "Tahoma, sans-serif" }}>Loading Adhkar.exe…</div>}><AdhkarApp /></React.Suspense>;
     return null;
   };
 
@@ -1524,7 +1531,7 @@ function Sem10XPApp() {
               <div className="start-menu-footer" onClick={() => setStartMenuOpen(false)}>Close Start Menu</div>
             </div>
           )}
-          {ready && <AdhkarBalloonPopup intervalMinutes={10} />}
+          {ready && <React.Suspense fallback={null}><AdhkarBalloonPopup intervalMinutes={10} /></React.Suspense>}
 
           <div className="taskbar">
             <button className={cls("start-btn", startMenuOpen && "start-btn-active")} onClick={() => setStartMenuOpen((s) => !s)}><span className="start-btn-logo">⊞</span> start</button>
