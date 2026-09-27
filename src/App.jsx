@@ -326,7 +326,7 @@ function XPProgress({ pct, height }) {
   return <div className="xp-progress" style={{ height: height || 15 }}><div className="xp-progress-segs">{Array.from({ length: segs }).map((_, i) => <span key={i} className={cls("xp-progress-seg", i < filled && "xp-progress-seg-on")} />)}</div></div>;
 }
 function XPGroupBox({ title, children, style }) { return <fieldset className="xp-groupbox" style={style}><legend>{title}</legend>{children}</fieldset>; }
-function StatCard({ n, label, color }) { return <div className="stat-card" style={{ borderLeftColor: color }}><div className="stat-card-n">{n}</div><div className="stat-card-label">{label}</div></div>; }
+function StatCard({ n, label, color, onClick, title }) { return <div className="stat-card" onClick={onClick} title={title} style={{ borderLeftColor: color, cursor: onClick ? "pointer" : undefined }}><div className="stat-card-n">{n}</div><div className="stat-card-label">{label}</div></div>; }
 
 const RESIZE_DIRS = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 function XPWindow({ id, title, icon, x, y, w, h, zIndex, minimized, focused, onFocus, onClose, onMinimize, children }) {
@@ -382,6 +382,32 @@ function TrackerApp({ discipline, progress, setProgress }) {
   });
   const expandAll = (state) => { const o = {}; sections.forEach((s) => (o[s] = state)); setOpenSections(o); };
   const doBackup = () => download(discipline.toLowerCase() + "-tracker-backup.json", JSON.stringify({ discipline, progress, exportedAt: new Date().toISOString() }, null, 2));
+  const doExportCsv = () => {
+    const csvCell = (value) => {
+      const text = value == null ? "" : String(value);
+      return '"' + text.replace(/"/g, '""') + '"';
+    };
+    const headers = ["#", "Lecture", "Department", "Exam", ...STAGES.map((stage) => stage.label), "Flagged", "Stale", "Last activity"];
+    const lines = [headers.map(csvCell).join(",")];
+    disciplineLectures.forEach((l) => {
+      const c = cell(l.id);
+      const last = lastActivity(l.id);
+      lines.push([
+        l.num, l.name, l.section, l.mid ? "MID" : "FINAL",
+        ...STAGES.map((stage) => c[stage.key] ? c[stage.key] : ""),
+        isFlagged(l.id) ? "Yes" : "No",
+        isStale(l.id) ? "Yes" : "No",
+        last ? last.toISOString() : ""
+      ].map(csvCell).join(","));
+    });
+    const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = discipline.toLowerCase() + "-tracker.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
   const fileInputRef = useRef(null);
   const doRestore = (e) => {
     const file = e.target.files && e.target.files[0]; if (!file) return;
@@ -407,7 +433,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
         <StatCard n={inProgress} label="In progress" color="#D6A61A" />
         <StatCard n={notStarted} label="Not started" color="#B0342B" />
         <StatCard n={flaggedCount} label="Flagged" color="#B0342B" />
-        <StatCard n={staleCount} label={"Stale (>" + STALE_DAYS + "d)"} color="#8A5A1E" />
+        <StatCard n={staleCount} label={"Stale (>" + STALE_DAYS + "d)"} color="#8A5A1E" onClick={() => window.dispatchEvent(new CustomEvent("sem10:tracker-stale-filter", { detail: { discipline } }))} title="Show stale lectures in Sort / Filter" />
       </div>
       <div className="toolbar">
         <div className="xp-search"><Search size={13} color="#555" /><input className="xp-search-input" placeholder="Search lectures..." value={query} onChange={(e) => setQuery(e.target.value)} /></div>
@@ -420,7 +446,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
       <div className="toolbar">
         <div className="row-gap"><XPButton small onClick={() => expandAll(true)}>Expand all</XPButton><XPButton small onClick={() => expandAll(false)}>Collapse all</XPButton><XPButton small active={grouped} onClick={() => setGrouped((g) => !g)}>{grouped ? "Grouped by dept." : "Flat list"}</XPButton></div>
         <div className="row-gap">
-          <XPButton small onClick={doBackup} title="Download your progress as a JSON file">Backup</XPButton>
+          <XPButton small onClick={doBackup} title="Download your progress as a JSON file">Backup</XPButton><XPButton small onClick={doExportCsv} title="Export this tracker as CSV">Export CSV</XPButton>
           <XPButton small onClick={() => fileInputRef.current && fileInputRef.current.click()} title="Load a backup JSON file">Restore</XPButton>
           <input ref={fileInputRef} type="file" accept="application/json" style={{ display: "none" }} onChange={doRestore} />
           <XPButton small onClick={() => window.print()}>Print</XPButton>
