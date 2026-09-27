@@ -1270,6 +1270,7 @@ function Sem10XPApp() {
     if (id === "timer") return <TimerApp timer={{ ...timer, secondsLeft }} timerActions={timerActions} settings={settings} setSettings={setSettings} tasks={tasks} addTask={addTask} plan={plan} />;
     if (id === "goals") return <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} />;
     if (id === "exams") return <ExamApp exams={exams} setExams={setExams} openApp={openApp} />;
+    if (id === "adhkar") return <AdhkarApp />;
     return null;
   };
 
