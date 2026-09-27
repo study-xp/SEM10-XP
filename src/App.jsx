@@ -1457,6 +1457,14 @@ function Sem10XPApp() {
     setFocusedId(id);
   };
   const startPomForEntry = (entry) => { timerActions.setMode("pomodoro"); timerActions.link("plan:" + entry.id); openApp("timer"); };
+  useEffect(() => {
+    const onOpenAdhkar = (event) => {
+      if (event?.detail?.id === "adhkar") openApp("adhkar");
+    };
+    window.addEventListener("sem10xp-open-app", onOpenAdhkar);
+    return () => window.removeEventListener("sem10xp-open-app", onOpenAdhkar);
+  }, []);
+
 
   const renderAppBody = (id) => {
     if (id === "computer") return <OverviewApp progress={progress} openApp={openApp} allData={{ progress, sessions, tasks, plan, exams, settings }} setAllData={{ setProgress, setSessions, setTasks, setPlan, setExams, setSettings }} />;
@@ -1726,6 +1734,8 @@ const CSS = `
   .timer-linked-label { margin-top:8px; opacity:0.75; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .notif-hint { margin-top:8px; font-size:10.5px; background:#FFF3CE; border:1px solid #E0C060; border-radius:3px; padding:5px 8px; cursor:pointer; text-align:center; }
   .week-chart { display:flex; align-items:flex-end; gap:6px; height:80px; padding-top:6px; }
+  .daily-mission-row { display:flex; align-items:center; gap:7px; padding:6px 7px; margin-bottom:4px; background:#fff; border:1px solid #D8D5C4; font-size:11.5px; }
+  .daily-mission-done { background:#EAF7DE; border-color:#B9DE9C; text-decoration:line-through; opacity:0.8; }
   .week-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; }
   .week-bar { width:100%; background: linear-gradient(180deg,#5FA8FF,#0A56D6); border-radius:2px 2px 0 0; }
   .week-bar-label { margin-top:3px; font-size:9px; color:#555; }
