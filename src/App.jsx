@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { AdhkarApp, AdhkarBalloonPopup, ADHKAR_APP_ENTRY } from "./Adhkar";
 import { Play, Pause, RotateCcw, SkipForward, X, Minus, Square, Copy, Check, Search, Volume2, VolumeX, Star, Clock3, Bell, Plus } from "lucide-react";
 
 /* ============================================================================
@@ -595,16 +596,146 @@ function TimerApp({ timer, timerActions, settings, setSettings, tasks, addTask, 
 /* ============================================================================
    GOALS APP
    ============================================================================ */
-function GoalsApp({ sessions, settings, setSettings }) {
+function GoalsApp({ sessions, settings, setSettings, plan, progress }) {
   const weekStart = startOfWeek(new Date(), settings.weekStartDay);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
   const dayStart = startOfDay(new Date());
-  const weekSessions = sessions.filter((s) => new Date(s.ts) >= weekStart);
-  const daySessions = sessions.filter((s) => new Date(s.ts) >= dayStart);
-  const weekCount = weekSessions.length, dayCount = daySessions.length;
-  const weekMinutes = weekSessions.reduce((a, s) => a + s.durationMin, 0);
-  const weekPct = settings.weeklyGoal > 0 ? Math.min(100, Math.round((weekCount / settings.weeklyGoal) * 100)) : 0;
-  const dailyTarget = settings.weeklyGoal > 0 ? Math.round(settings.weeklyGoal / 7) : 0;
-  const dayPct = dailyTarget > 0 ? Math.min(100, Math.round((dayCount / dailyTarget) * 100)) : 0;
+  const todayKey = localDateKey(new Date());
+  const weekSessions = sessions.filter((s) => { const t = new Date(s.ts); return t >= weekStart && t < weekEnd; });
+  const todaySessions = weekSessions.filter((s) => new Date(s.ts) >= dayStart);
+  const weekCount = weekSessions.length;
+  const weekMinutes = weekSessions.reduce((a, s) => a + (Number(s.durationMin) || 0), 0);
+  const weeklyTarget = Math.max(0, Number(settings.weeklyGoal) || 0);
+  const weekPct = weeklyTarget ? Math.min(100, Math.round((weekCount / weeklyTarget) * 100)) : 0;
+  const daysLeft = Math.max(1, Math.ceil((weekEnd - new Date()) / 86400000));
+  const pomsRemaining = Math.max(0, weeklyTarget - weekCount);
+  const neededPerDay = pomsRemaining ? Math.ceil(pomsRemaining / daysLeft) : 0;
+  const dailyTarget = weeklyTarget ? Math.ceil(weeklyTarget / 7) : 0;
+  const todayPct = dailyTarget ? Math.min(100, Math.round((todaySessions.length / dailyTarget) * 100)) : 0;
+  const goals = Array.isArray(settings.weeklyGoals) ? settings.weeklyGoals : [];
+
+  const scopeLabel = (scope) => {
+    if (!scope || scope === "all") return "All study";
+    if (scope.startsWith("discipline:")) return scope.slice(11);
+    if (scope.startsWith("section:")) return scope.slice(8);
+    if (scope.startsWith("lecture:")) {
+      const l = LECTURES.find((x) => x.id === scope.slice(8));
+      return l ? l.name : "Lecture";
+    }
+    return scope;
+  };
+  const matchesScope = (goal, item) => {
+    if (!goal.scope || goal.scope === "all") return true;
+    const scope = goal.scope;
+    if (scope.startsWith("discipline:")) return item.discipline === scope.slice(11);
+    if (scope.startsWith("section:")) return item.section === scope.slice(8);
+    if (scope.startsWith("lecture:")) return item.lectureId === scope.slice(8) || item.id === scope.slice(8);
+    return false;
+  };
+  const trackerStageCount = (goal) => {
+    return LECTURES.reduce((sum, l) => {
+      if (!matchesScope(goal, l)) return sum;
+      return sum + STAGES.reduce((n, stage) => n + (progress[l.id]?.[stage.key] ? 1 : 0), 0);
+    }, 0);
+  };
+  const completedLectureCount = (goal) => {
+    return LECTURES.reduce((sum, l) => {
+      if (!matchesScope(goal, l)) return sum;
+      return sum + (STAGES.every((stage) => progress[l.id]?.[stage.key]) ? 1 : 0);
+    }, 0);
+  };
+  const goalProgress = (goal) => {
+    switch (goal.type) {
+      case "poms":
+        return weekSessions.filter((s) => {
+          if (!goal.scope || goal.scope === "all") return true;
+          const l = LECTURES.find((x) => x.id === s.lectureId);
+          return l ? matchesScope(goal, l) : false;
+        }).length;
+      case "time":
+        return Math.round(weekSessions.filter((s) => {
+          if (!goal.scope || goal.scope === "all") return true;
+          const l = LECTURES.find((x) => x.id === s.lectureId);
+          return l ? matchesScope(goal, l) : false;
+        }).reduce((a, s) => a + (Number(s.durationMin) || 0), 0));
+      case "lectures":
+        return completedLectureCount(goal);
+      case "tracker":
+        return trackerStageCount(goal);
+      case "planner":
+        return (plan || []).filter((p) => {
+          const d = new Date(p.dateKey + "T00:00:00");
+          if (d < weekStart || d >= weekEnd || !p.done) return false;
+          const l = LECTURES.find((x) => x.id === p.lectureId);
+          return !goal.scope || goal.scope === "all" || (l && matchesScope(goal, l));
+        }).length;
+      case "custom":
+        return Number(goal.manual) || 0;
+      default:
+        return 0;
+    }
+  };
+
+  const TYPE_META = {
+    poms: { label: "Pomodoros", icon: "🍅", unit: "poms" },
+    time: { label: "Study time", icon: "⏱", unit: "min" },
+    lectures: { label: "Completed lectures", icon: "📚", unit: "lectures" },
+    tracker: { label: "Tracker stages", icon: "☑", unit: "stages" },
+    planner: { label: "Planner sessions", icon: "🗓", unit: "sessions" },
+    custom: { label: "Custom", icon: "★", unit: "steps" },
+  };
+
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState({ title: "", type: "poms", target: 10, scope: "all" });
+
+  const saveGoal = () => {
+    if (!draft.title.trim()) return;
+    const target = Math.max(1, Number(draft.target) || 1);
+    const goal = { id: "G" + Date.now(), title: draft.title.trim(), type: draft.type, target, scope: draft.scope || "all", manual: 0 };
+    setSettings((s) => ({ ...s, weeklyGoals: [...(s.weeklyGoals || []), goal] }));
+    setDraft({ title: "", type: "poms", target: 10, scope: "all" });
+    setAdding(false);
+  };
+  const removeGoal = (id) => setSettings((s) => ({ ...s, weeklyGoals: (s.weeklyGoals || []).filter((g) => g.id !== id) }));
+  const bumpCustom = (id, delta) => setSettings((s) => ({ ...s, weeklyGoals: (s.weeklyGoals || []).map((g) => g.id === id ? { ...g, manual: Math.max(0, (Number(g.manual) || 0) + delta) } : g) }));
+
+  const plannerToday = (plan || []).filter((p) => p.dateKey === todayKey);
+  const todayPlannerDone = plannerToday.filter((p) => p.done).length;
+  const todayTrackerProgress = LECTURES.reduce((n, l) => n + STAGES.reduce((a, st) => a + (progress[l.id]?.[st.key] && false ? 1 : 0), 0), 0);
+  const reviewToday = plannerToday.some((p) => p.stage === "review" && p.done) || todaySessions.some((s) => /review|مراجعة/i.test(s.label || ""));
+  const dailyMissionDone = [
+    dailyTarget > 0 && todaySessions.length >= dailyTarget,
+    plannerToday.length > 0 && todayPlannerDone >= plannerToday.length,
+    reviewToday,
+  ];
+  const dailyMissionTotal = dailyMissionDone.length;
+  const dailyMissionCompleted = dailyMissionDone.filter(Boolean).length;
+
+  const goalRows = goals.map((goal) => {
+    const meta = TYPE_META[goal.type] || TYPE_META.custom;
+    const done = goalProgress(goal);
+    const pct = Math.min(100, Math.round((done / Math.max(1, Number(goal.target) || 1)) * 100));
+    return { goal, meta, done, pct };
+  });
+
+  const goalXP = goalRows.reduce((n, row) => n + (row.pct >= 100 ? 100 : Math.round(row.done / Math.max(1, row.goal.target) * 25)), 0);
+  const pomXP = weekCount * 25;
+  const plannerXP = (plan || []).filter((p) => { const d = new Date(p.dateKey + "T00:00:00"); return d >= weekStart && d < weekEnd && p.done; }).length * 15;
+  const trackerXP = trackerStageCount({ scope: "all" }) * 5;
+  const dailyXP = dailyMissionCompleted * 25;
+  const weekXP = pomXP + plannerXP + trackerXP + dailyXP + goalXP;
+  const weekLevel = Math.max(1, Math.floor(weekXP / 1000) + 1);
+  const levelBase = (weekLevel - 1) * 1000;
+  const levelXP = Math.max(0, weekXP - levelBase);
+  const levelPct = Math.min(100, Math.round((levelXP / 1000) * 100));
+  const weekComplete = weeklyTarget > 0 && weekCount >= weeklyTarget;
+  const completedGoalCount = goalRows.filter((r) => r.pct >= 100).length;
+  const completionStats = {
+    poms: weekCount,
+    planner: (plan || []).filter((p) => { const d = new Date(p.dateKey + "T00:00:00"); return d >= weekStart && d < weekEnd && p.done; }).length,
+    reviews: (plan || []).filter((p) => { const d = new Date(p.dateKey + "T00:00:00"); return d >= weekStart && d < weekEnd && p.done && p.stage === "review"; }).length,
+  };
+
   const weeks = [];
   for (let i = 7; i >= 0; i--) {
     const ws = new Date(weekStart); ws.setDate(ws.getDate() - i * 7);
@@ -614,36 +745,100 @@ function GoalsApp({ sessions, settings, setSettings }) {
   }
   const maxWeekCount = Math.max(1, ...weeks.map((w) => w.count));
   const byGroup = {};
-  sessions.forEach((s) => { const g = s.groupLabel || "Freeform"; byGroup[g] = (byGroup[g] || 0) + 1; });
+  weekSessions.forEach((s) => { const g = s.groupLabel || "Freeform"; byGroup[g] = (byGroup[g] || 0) + 1; });
   const groupRows = Object.entries(byGroup).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
   const exportCsv = () => {
     const header = "timestamp,duration_min,label,group\n";
     const rows = sessions.map((s) => [s.ts, s.durationMin, '"' + (s.label || "") + '"', s.groupLabel || ""].join(",")).join("\n");
     download("pomodoro-sessions.csv", header + rows);
   };
+
+  const scopeOptions = [
+    { value: "all", label: "All study" },
+    { value: "discipline:Medicine", label: "Medicine" },
+    { value: "discipline:Surgery", label: "Surgery" },
+    ...[...new Set(LECTURES.map((l) => l.section))].map((section) => ({ value: "section:" + section, label: section })),
+  ];
+  if (draft.type === "lectures" || draft.type === "tracker" || draft.type === "poms" || draft.type === "time" || draft.type === "planner") {
+    scopeOptions.push(...LECTURES.map((l) => ({ value: "lecture:" + l.id, label: l.name + " — " + l.section })));
+  }
+
   return (
     <div className="app-col">
-      <XPGroupBox title="Weekly goal">
-        <div className="settings-grid" style={{ marginBottom: 8 }}>
-          <label className="xp-small-text">Target poms / week<input type="number" className="xp-number" value={settings.weeklyGoal} min={0} onChange={(e) => setSettings((s) => ({ ...s, weeklyGoal: +e.target.value || 0 }))} /></label>
-          <label className="xp-small-text">Week starts on
-            <select className="xp-select" style={{ marginTop: 2 }} value={settings.weekStartDay} onChange={(e) => setSettings((s) => ({ ...s, weekStartDay: +e.target.value }))}>
-              <option value={6}>Saturday</option><option value={0}>Sunday</option><option value={1}>Monday</option>
-            </select>
-          </label>
+      <XPGroupBox title="THIS WEEK'S MISSION">
+        <div className="row-between">
+          <div>
+            <div style={{ fontSize: 18, fontWeight: "bold", color: "#0A46C6" }}>{weekCount} / {weeklyTarget || "—"} POMs</div>
+            <div className="xp-small-text">{pomsRemaining ? pomsRemaining + " poms remaining · " : ""}{daysLeft} days remaining · {weekMinutes} focused minutes</div>
+          </div>
+          <div style={{ fontSize: 22, fontWeight: "bold" }}>{weekPct}%</div>
         </div>
-        <div className="row-between"><span className="xp-small-text">{weekCount} / {settings.weeklyGoal || "—"} poms this week ({weekMinutes} min)</span><span className="xp-small-text" style={{ fontWeight: "bold" }}>{weekPct}%</span></div>
-        <XPProgress pct={weekPct} />
-        <div className="xp-small-text" style={{ marginTop: 8 }}>Today: {dayCount} / {dailyTarget || "—"} poms</div>
-        <XPProgress pct={dayPct} height={10} />
-        <div className="xp-small-text" style={{ marginTop: 6, opacity: 0.75 }}>Resets automatically each week/day — counted live from your session log.</div>
+        <XPProgress pct={weekPct} height={14} />
+        <div className="settings-grid" style={{ marginTop: 8 }}>
+          <label className="xp-small-text">Weekly POM target<input type="number" className="xp-number" value={weeklyTarget} min={0} onChange={(e) => setSettings((s) => ({ ...s, weeklyGoal: +e.target.value || 0 }))} /></label>
+          <label className="xp-small-text">Week starts<select className="xp-select" style={{ marginTop: 2 }} value={settings.weekStartDay} onChange={(e) => setSettings((s) => ({ ...s, weekStartDay: +e.target.value }))}><option value={6}>Saturday</option><option value={0}>Sunday</option><option value={1}>Monday</option></select></label>
+        </div>
+        <div className="row-between" style={{ marginTop: 8 }}>
+          <span className="xp-small-text">~{neededPerDay || 0} POMs/day needed</span>
+          <span className="xp-small-text">{todaySessions.length} / {dailyTarget || "—"} today</span>
+        </div>
       </XPGroupBox>
-      <XPGroupBox title="Last 8 weeks" style={{ marginTop: 10 }}>
+
+      <XPGroupBox title="WEEKLY PROGRESSION" style={{ marginTop: 10 }}>
+        <div className="row-between"><div><strong>LEVEL {String(weekLevel).padStart(2, "0")}</strong><div className="xp-small-text">{weekXP} / {levelBase + 1000} XP this week</div></div><span style={{ fontSize: 20 }}>⚡</span></div>
+        <XPProgress pct={levelPct} height={12} />
+        <div className="xp-small-text" style={{ marginTop: 6 }}>🍅 {pomXP} · 🗓 {plannerXP} · ☑ {trackerXP} · 🎯 {goalXP} · daily bonus {dailyXP}</div>
+      </XPGroupBox>
+
+      <XPGroupBox title="TODAY'S MISSIONS" style={{ marginTop: 10 }}>
+        <div className="row-between" style={{ marginBottom: 6 }}><strong>{dailyMissionCompleted} / {dailyMissionTotal} complete</strong><span className="xp-small-text">+{dailyXP} XP</span></div>
+        <div className={cls("daily-mission-row", dailyMissionDone[0] && "daily-mission-done")}><span>{dailyMissionDone[0] ? "☑" : "☐"}</span><span>Hit today's Pomodoro target ({dailyTarget || "set a weekly target"})</span></div>
+        <div className={cls("daily-mission-row", dailyMissionDone[1] && "daily-mission-done")}><span>{dailyMissionDone[1] ? "☑" : "☐"}</span><span>Complete today's Planner sessions ({todayPlannerDone}/{plannerToday.length})</span></div>
+        <div className={cls("daily-mission-row", dailyMissionDone[2] && "daily-mission-done")}><span>{dailyMissionDone[2] ? "☑" : "☐"}</span><span>Do 1 review session</span></div>
+      </XPGroupBox>
+
+      <XPGroupBox title="GOALS & MISSIONS" style={{ marginTop: 10 }}>
+        {goalRows.length === 0 && !adding && <div className="xp-small-text" style={{ padding: 8 }}>No weekly missions yet. Add one and its progress will update from your existing study data.</div>}
+        {goalRows.map(({ goal, meta, done, pct }) => (
+          <div key={goal.id} style={{ border: "1px solid #D0CDC0", background: "#F8F7F0", padding: 8, marginBottom: 7 }}>
+            <div className="row-between">
+              <span style={{ fontWeight: "bold", fontSize: 12 }}>{meta.icon} {goal.title}</span>
+              <button className="xp-small-text" style={{ border: 0, background: "transparent", color: "#666", cursor: "pointer" }} onClick={() => removeGoal(goal.id)}>×</button>
+            </div>
+            <div className="xp-small-text" style={{ margin: "3px 0" }}>{done} / {goal.target} {meta.unit} · {scopeLabel(goal.scope)}</div>
+            <XPProgress pct={pct} height={10} />
+            {goal.type === "custom" && <div className="row-gap" style={{ marginTop: 5 }}><XPButton small onClick={() => bumpCustom(goal.id, -1)}>−1</XPButton><XPButton small onClick={() => bumpCustom(goal.id, 1)}>+1 complete</XPButton></div>}
+          </div>
+        ))}
+        {!adding && <XPButton onClick={() => setAdding(true)}>＋ Add weekly mission</XPButton>}
+        {adding && (
+          <div style={{ border: "1px solid #ACA899", background: "#fff", padding: 8 }}>
+            <input className="xp-text-input" style={{ width: "100%", boxSizing: "border-box" }} placeholder="Goal name — e.g. Finish 5 Neurology lectures" value={draft.title} onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))} />
+            <div className="settings-grid" style={{ marginTop: 6 }}>
+              <label className="xp-small-text">Goal type<select className="xp-select" value={draft.type} onChange={(e) => setDraft((d) => ({ ...d, type: e.target.value }))}>{Object.entries(TYPE_META).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}</select></label>
+              <label className="xp-small-text">Target<input className="xp-number" type="number" min={1} value={draft.target} onChange={(e) => setDraft((d) => ({ ...d, target: e.target.value }))} /></label>
+              <label className="xp-small-text" style={{ gridColumn: "1 / -1" }}>Scope<select className="xp-select" value={draft.scope} onChange={(e) => setDraft((d) => ({ ...d, scope: e.target.value }))}>{scopeOptions.map((o, i) => <option key={o.value + i} value={o.value}>{o.label}</option>)}</select></label>
+            </div>
+            <div className="row-gap" style={{ marginTop: 7, justifyContent: "flex-end" }}><XPButton small onClick={() => setAdding(false)}>Cancel</XPButton><XPButton small active onClick={saveGoal}>Create mission</XPButton></div>
+          </div>
+        )}
+      </XPGroupBox>
+
+      {weekComplete && (
+        <XPGroupBox title="🏆 WEEK COMPLETE" style={{ marginTop: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: "bold", color: "#3A7A1A" }}>{weekCount} / {weeklyTarget} Pomodoros</div>
+          <div className="xp-small-text" style={{ marginTop: 4 }}>{completionStats.planner} planner sessions · {completionStats.reviews} review sessions · {completedGoalCount} weekly missions completed</div>
+          <div style={{ marginTop: 6, fontWeight: "bold" }}>+250 XP reward</div>
+        </XPGroupBox>
+      )}
+
+      <XPGroupBox title="8-WEEK HISTORY" style={{ marginTop: 10 }}>
         <div className="week-chart">{weeks.map((w, i) => <div key={i} className="week-bar-col"><div className="week-bar" style={{ height: Math.max(3, (w.count / maxWeekCount) * 60) }} title={w.count + " poms"} /><span className="xp-small-text week-bar-label">{w.label}</span></div>)}</div>
       </XPGroupBox>
-      <XPGroupBox title="Poms by specialty / project" style={{ marginTop: 10 }}>
-        {groupRows.length === 0 && <div className="xp-small-text">No linked sessions yet.</div>}
-        {groupRows.map(([g, count]) => <div key={g} className="row-between" style={{ marginBottom: 4 }}><span className="xp-small-text">{g}</span><span className="xp-small-text" style={{ fontWeight: "bold" }}>{count}</span></div>)}
+      <XPGroupBox title="THIS WEEK BY AREA" style={{ marginTop: 10 }}>
+        {groupRows.length === 0 && <div className="xp-small-text">No sessions yet this week.</div>}
+        {groupRows.map(([g, count]) => <div key={g} className="row-between" style={{ marginBottom: 4 }}><span className="xp-small-text">{g}</span><span className="xp-small-text" style={{ fontWeight: "bold" }}>{count} POMs</span></div>)}
       </XPGroupBox>
       <div style={{ marginTop: 10, textAlign: "right" }}><XPButton onClick={exportCsv}>Export CSV</XPButton></div>
     </div>
@@ -983,6 +1178,7 @@ const APPS = {
   planner: { title: "StudyPlanner.exe", icon: "🗓️", w: 700, h: 600 },
   timer: { title: "FocusTimer.exe", icon: "⏱️", w: 380, h: 610 },
   goals: { title: "WeeklyGoals.exe", icon: "📊", w: 420, h: 560 },
+  adhkar: ADHKAR_APP_ENTRY,
   exams: { title: "ExamSchedule.exe", icon: "📝", w: 640, h: 580 },
 };
 function ClockWidget() {
@@ -1069,7 +1265,7 @@ function Sem10XPApp() {
   const [tasks, setTasks, tasksLoaded] = useStoredState("custom-tasks", []);
   const [plan, setPlan, plannerLoaded] = useStoredState("study-plan-v1", []);
   const [exams, setExams, examLoaded] = useStoredState("exam-schedule-v1", DEFAULT_EXAMS);
-  const [settings, setSettings, settingsLoaded] = useStoredState("app-settings", { pomodoroMin: 25, shortMin: 5, longMin: 15, longBreakEvery: 4, autoStartBreaks: false, autoStartPomodoros: false, weeklyGoal: 30, weekStartDay: 6 });
+  const [settings, setSettings, settingsLoaded] = useStoredState("app-settings", { pomodoroMin: 25, shortMin: 5, longMin: 15, longBreakEvery: 4, autoStartBreaks: false, autoStartPomodoros: false, weeklyGoal: 30, weekStartDay: 6, weeklyGoals: [] });
   const [theme, setTheme] = useState("Blue");
   const addSession = (s) => setSessions((prev) => [...prev, s]);
   const addTask = (t) => setTasks((prev) => [...prev, t]);
@@ -1268,8 +1464,9 @@ function Sem10XPApp() {
     if (id === "medicine") return <TrackerApp discipline="Medicine" progress={progress} setProgress={setProgress} />;
     if (id === "planner") return <PlannerApp plan={plan} setPlan={setPlan} progress={progress} setProgress={setProgress} startPomForEntry={startPomForEntry} />;
     if (id === "timer") return <TimerApp timer={{ ...timer, secondsLeft }} timerActions={timerActions} settings={settings} setSettings={setSettings} tasks={tasks} addTask={addTask} plan={plan} />;
-    if (id === "goals") return <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} />;
+    if (id === "goals") return <GoalsApp sessions={sessions} settings={settings} setSettings={setSettings} plan={plan} progress={progress} />;
     if (id === "exams") return <ExamApp exams={exams} setExams={setExams} openApp={openApp} />;
+    if (id === "adhkar") return <AdhkarApp />;
     return null;
   };
 
@@ -1296,6 +1493,7 @@ function Sem10XPApp() {
               </div>
             ))}
           </div>
+          <AdhkarBalloonPopup />
           {timer.running && (
             <div className="mini-timer-badge" onClick={() => openApp("timer")}>⏱ {fmtClock(secondsLeft)}</div>
           )}
