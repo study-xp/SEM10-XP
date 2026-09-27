@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Play, Pause, RotateCcw, SkipForward, X, Minus, Square, Copy, Check, Search, Volume2, VolumeX, Star, Clock3, Bell, Plus } from "lucide-react";
-import { ADHKAR_APP_ENTRY, AdhkarApp } from "./Adhkar.jsx";
+import { ADHKAR_APP_ENTRY, AdhkarApp, AdhkarBalloonPopup } from "./Adhkar.jsx";
 
 /* ============================================================================
    DATA
@@ -1255,6 +1255,13 @@ function Sem10XPApp() {
     setFocusedId(key);
   };
   const closeApp = (id) => { setWindows((ws) => ws.filter((w) => w.id !== id)); setFocusedId((f) => (f === id ? null : f)); };
+  useEffect(() => {
+    const handleAdhkarOpen = (event) => {
+      if (event?.detail?.id === "adhkar") openApp("adhkar");
+    };
+    window.addEventListener("sem10xp-open-app", handleAdhkarOpen);
+    return () => window.removeEventListener("sem10xp-open-app", handleAdhkarOpen);
+  }, []);
   const minimizeApp = (id) => { setWindows((ws) => ws.map((w) => (w.id === id ? { ...w, minimized: true } : w))); setFocusedId((f) => (f === id ? null : f)); };
   const focusApp = (id) => {
     zTop.current += 1;
@@ -1323,6 +1330,8 @@ function Sem10XPApp() {
               <div className="start-menu-footer" onClick={() => setStartMenuOpen(false)}>Close Start Menu</div>
             </div>
           )}
+          <AdhkarBalloonPopup intervalMinutes={10} />
+
           <div className="taskbar">
             <button className={cls("start-btn", startMenuOpen && "start-btn-active")} onClick={() => setStartMenuOpen((s) => !s)}><span className="start-btn-logo">⊞</span> start</button>
             <div className="taskbar-windows">
