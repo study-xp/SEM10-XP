@@ -67,6 +67,7 @@ function sectionsOf(discipline) {
   return out;
 }
 const STAGES = [{ key: "paper", label: "ورق" }, { key: "explain", label: "شرح" }, { key: "study", label: "مذاكرة" }, { key: "solve", label: "حل" }, { key: "review", label: "مراجعة" }];
+const PROGRESS_STAGES = STAGES.filter((s) => s.key !== "paper");
 const STALE_DAYS = 14;
 
 /* ============================================================================
@@ -631,17 +632,16 @@ function GoalsApp({ sessions, settings, setSettings, plan, progress }) {
     if (scope.startsWith("lecture:")) return item.lectureId === scope.slice(8) || item.id === scope.slice(8);
     return false;
   };
-  const goalStages = STAGES.filter((s) => s.key !== "paper");
   const trackerStageCount = (goal) => {
     return LECTURES.reduce((sum, l) => {
       if (!matchesScope(goal, l)) return sum;
-      return sum + goalStages.reduce((n, stage) => n + (progress[l.id]?.[stage.key] ? 1 : 0), 0);
+      return sum + PROGRESS_STAGES.reduce((n, stage) => n + (progress[l.id]?.[stage.key] ? 1 : 0), 0);
     }, 0);
   };
   const completedLectureCount = (goal) => {
     return LECTURES.reduce((sum, l) => {
       if (!matchesScope(goal, l)) return sum;
-      return sum + (goalStages.every((stage) => progress[l.id]?.[stage.key]) ? 1 : 0);
+      return sum + (PROGRESS_STAGES.every((stage) => progress[l.id]?.[stage.key]) ? 1 : 0);
     }, 0);
   };
   const goalProgress = (goal) => {
