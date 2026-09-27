@@ -7,11 +7,27 @@ import React, { useState, useEffect, useRef } from "react";
 export const ADHKAR_APP_ENTRY = { title: "Adhkar.exe", icon: "📿", w: 460, h: 600 };
 
 const ADHKAR_SETTINGS_VERSION = "adhkar-popup-settings-v2";
+
+// Adhkar must never be able to crash the XP shell if browser storage is blocked.
+function adhkarGet(key, fallback = null) {
+  try {
+    return typeof localStorage !== "undefined" ? adhkarGet(key) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function adhkarSet(key, value) {
+  try {
+    if (typeof localStorage !== "undefined") adhkarSet(key, String(value));
+  } catch {
+    // Storage is optional; the reminder/app can still run in memory.
+  }
+}
 function readPopupMinutes(defaultMinutes = 10) {
-  const saved = localStorage.getItem("adhkar-popup-minutes");
+  const saved = adhkarGet("adhkar-popup-minutes");
   if (saved === null) return defaultMinutes;
   const n = Number(saved);
-  if (!localStorage.getItem(ADHKAR_SETTINGS_VERSION) && n === 0) return defaultMinutes;
+  if (!adhkarGet(ADHKAR_SETTINGS_VERSION) && n === 0) return defaultMinutes;
   return Number.isFinite(n) && n >= 0 ? n : defaultMinutes;
 }
 
@@ -184,10 +200,10 @@ export function AdhkarApp() {
   const [ayahIndex, setAyahIndex] = useState(() => dayIndex(AYAH_LIST.length));
   const salawatAudioRef = useRef(null);
   const [popupMinutes, setPopupMinutes] = useState(() => readPopupMinutes(10));
-  const [popupType, setPopupType] = useState(() => localStorage.getItem("adhkar-popup-type") || "salawat");
-  const [popupPinned, setPopupPinned] = useState(() => localStorage.getItem("adhkar-popup-pinned") === "1");
-  const [notificationEnabled, setNotificationEnabled] = useState(() => localStorage.getItem("adhkar-notifications") === "1");
-  const [audioEnabled, setAudioEnabled] = useState(() => localStorage.getItem("adhkar-audio") === "1");
+  const [popupType, setPopupType] = useState(() => adhkarGet("adhkar-popup-type") || "salawat");
+  const [popupPinned, setPopupPinned] = useState(() => adhkarGet("adhkar-popup-pinned") === "1");
+  const [notificationEnabled, setNotificationEnabled] = useState(() => adhkarGet("adhkar-notifications") === "1");
+  const [audioEnabled, setAudioEnabled] = useState(() => adhkarGet("adhkar-audio") === "1");
   const [audioStatus, setAudioStatus] = useState("");
 
   const enableNotifications = async () => {
@@ -195,12 +211,12 @@ export function AdhkarApp() {
     const permission = await Notification.requestPermission();
     const enabled = permission === "granted";
     setNotificationEnabled(enabled);
-    localStorage.setItem("adhkar-notifications", enabled ? "1" : "0");
+    adhkarSet("adhkar-notifications", enabled ? "1" : "0");
     window.dispatchEvent(new CustomEvent("adhkar-popup-settings"));
   };
   const savePopupSetting = (key, value) => {
-    localStorage.setItem(key, String(value));
-    localStorage.setItem(ADHKAR_SETTINGS_VERSION, "1");
+    adhkarSet(key, String(value));
+    adhkarSet(ADHKAR_SETTINGS_VERSION, "1");
     window.dispatchEvent(new CustomEvent("adhkar-popup-settings"));
   };
   const hadith = HADITH_LIST[hadithIndex];
@@ -306,14 +322,14 @@ export function AdhkarBalloonPopup({ intervalMinutes = 10, fireImmediately = fal
   const [audioError, setAudioError] = useState("");
   const [settings, setSettings] = useState(() => ({
     minutes: (() => {
-      const saved = localStorage.getItem("adhkar-popup-minutes");
+      const saved = adhkarGet("adhkar-popup-minutes");
       const n = saved === null ? Number(intervalMinutes || 10) : Number(saved);
       return n > 0 ? n : 10;
     })(),
-    type: localStorage.getItem("adhkar-popup-type") || "salawat",
-    pinned: localStorage.getItem("adhkar-popup-pinned") === "1",
-    notifications: localStorage.getItem("adhkar-notifications") === "1",
-    audio: localStorage.getItem("adhkar-audio") === "1"
+    type: adhkarGet("adhkar-popup-type") || "salawat",
+    pinned: adhkarGet("adhkar-popup-pinned") === "1",
+    notifications: adhkarGet("adhkar-notifications") === "1",
+    audio: adhkarGet("adhkar-audio") === "1"
   }));
   const rotateIndex = useRef(0);
   const dismissTimer = useRef(null);
@@ -324,10 +340,10 @@ export function AdhkarBalloonPopup({ intervalMinutes = 10, fireImmediately = fal
         const n = readPopupMinutes(Number(intervalMinutes || 10));
         return n >= 0 ? n : Number(intervalMinutes || 10);
       })(),
-      type: localStorage.getItem("adhkar-popup-type") || "salawat",
-      pinned: localStorage.getItem("adhkar-popup-pinned") === "1",
-      notifications: localStorage.getItem("adhkar-notifications") === "1",
-      audio: localStorage.getItem("adhkar-audio") === "1"
+      type: adhkarGet("adhkar-popup-type") || "salawat",
+      pinned: adhkarGet("adhkar-popup-pinned") === "1",
+      notifications: adhkarGet("adhkar-notifications") === "1",
+      audio: adhkarGet("adhkar-audio") === "1"
     });
     window.addEventListener("adhkar-popup-settings", sync);
     return () => window.removeEventListener("adhkar-popup-settings", sync);
