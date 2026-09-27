@@ -11,14 +11,14 @@ const ADHKAR_SETTINGS_VERSION = "adhkar-popup-settings-v2";
 // Adhkar must never be able to crash the XP shell if browser storage is blocked.
 function adhkarGet(key, fallback = null) {
   try {
-    return typeof localStorage !== "undefined" ? adhkarGet(key) : fallback;
+    return typeof localStorage !== "undefined" ? localStorage.getItem(key) : fallback;
   } catch {
     return fallback;
   }
 }
 function adhkarSet(key, value) {
   try {
-    if (typeof localStorage !== "undefined") adhkarSet(key, String(value));
+    if (typeof localStorage !== "undefined") localStorage.setItem(key, String(value));
   } catch {
     // Storage is optional; the reminder/app can still run in memory.
   }
