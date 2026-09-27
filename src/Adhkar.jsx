@@ -402,7 +402,7 @@ export function AdhkarBalloonPopup({ intervalMinutes = 10, fireImmediately = fal
       <style>{ADHKAR_CSS}</style>
       <div className="adhkar-balloon-head">
         <span>{content.kind}</span>
-        <button className="adhkar-balloon-close" onClick={(e) => { e.stopPropagation(); setVisible(false); }} aria-label="إغلاق">×</button>
+        <button className="adhkar-balloon-close" onClick={() => setVisible(false)} aria-label="إغلاق">×</button>
       </div>
       <div className="adhkar-balloon-body">{content.text}</div>
       {content.source ? <div className="adhkar-balloon-source">{content.source}</div> : null}
