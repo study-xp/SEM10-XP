@@ -398,11 +398,11 @@ export function AdhkarBalloonPopup({ intervalMinutes = 10, fireImmediately = fal
 
   if (!visible || !content) return null;
   return (
-    <div className="adhkar-balloon" dir="rtl" role="button" tabIndex={0} onClick={(e) => { if (e.target.closest(".adhkar-balloon-close")) return; window.dispatchEvent(new CustomEvent("sem10xp-open-app", { detail: { id: "adhkar" } })); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") window.dispatchEvent(new CustomEvent("sem10xp-open-app", { detail: { id: "adhkar" } })); }} title="فتح Adhkar.exe">
+    <div className="adhkar-balloon" dir="rtl" role="button" tabIndex={0} onClick={() => window.dispatchEvent(new CustomEvent("sem10xp-open-app", { detail: { id: "adhkar" } }))} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") window.dispatchEvent(new CustomEvent("sem10xp-open-app", { detail: { id: "adhkar" } })); }} title="فتح Adhkar.exe">
       <style>{ADHKAR_CSS}</style>
       <div className="adhkar-balloon-head">
         <span>{content.kind}</span>
-        <button className="adhkar-balloon-close" onClick={() => setVisible(false)} aria-label="إغلاق" title="إغلاق">×</button>
+        <button className="adhkar-balloon-close" onClick={() => setVisible(false)} aria-label="إغلاق">×</button>
       </div>
       <div className="adhkar-balloon-body">{content.text}</div>
       {content.source ? <div className="adhkar-balloon-source">{content.source}</div> : null}
