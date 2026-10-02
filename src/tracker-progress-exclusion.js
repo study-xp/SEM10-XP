@@ -16,5 +16,9 @@
   function done(d){const p=read();return Object.entries(p).reduce((n,[id,c])=>n+(c&&typeof c==='object'&&disc(id)===d?ACADEMIC_KEYS.filter(k=>!!c[k]).length:0),0)}
   function paint(el,p){const a=Array.from(el.querySelectorAll('.xp-progress-seg')),f=Math.round(Math.max(0,Math.min(100,p))/100*a.length);a.forEach((x,i)=>x.classList.toggle('xp-progress-seg-on',i<f))}
   function refresh(){const ii=infos();ii.forEach(x=>{if(!x.total)return;const p=Math.round(done(x.d)/(x.total*4)*100),txt=Array.from(x.w.querySelectorAll('.xp-small-text')).find(e=>/%\s*complete$/i.test(e.textContent.trim()));if(txt)txt.textContent=p+'% complete';const bar=x.w.querySelector('.tracker-hero .xp-progress');if(bar)paint(bar,p)});const total=168,p=read(),n=Object.entries(p).reduce((s,[id,c])=>s+(c&&typeof c==='object'&&disc(id)?ACADEMIC_KEYS.filter(k=>!!c[k]).length:0),0),pct=Math.round(n/(total*4)*100);document.querySelectorAll('.xp-window').forEach(w=>{if(w.querySelector('.tracker-hero-sub'))return;const ring=w.querySelector('.overview-ring'),inner=w.querySelector('.overview-ring-inner');if(ring)ring.style.background=`conic-gradient(#4E9A1F ${pct}%, #d8d5c4 0)`;if(inner)inner.innerHTML=pct+'%<span>complete</span>';const t=Array.from(w.querySelectorAll('.xp-small-text')).find(e=>/cells checked/i.test(e.textContent));if(t)t.textContent=`${n} / ${total*4} cells checked · saved on this device`})}
-  new MutationObserver(()=>schedule(refresh)).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});addEventListener('storage',e=>{if(e.key===progressKey)schedule(refresh,0)});refresh();
+  let observing=true;
+ const observer=new MutationObserver(()=>{if(observing)schedule(refresh)});
+ observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+ addEventListener('storage',e=>{if(e.key===progressKey)schedule(refresh,0)});
+ refresh();
 })();
