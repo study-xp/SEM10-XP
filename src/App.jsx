@@ -73,6 +73,35 @@ const STAGES = [{ key: "paper", label: "ورق" }, { key: "explain", label: "ش�
 const PROGRESS_STAGES = STAGES.filter((s) => s.key !== "paper");
 const STALE_DAYS = 14;
 
+// Medicine final-exam marks supplied by the user.
+const MEDICINE_FINAL_MARKS = {
+  "GIT & Hepatology": 7,
+  "Chest (Emergency)": 2,
+  "Cardiology (Emergency)": 12,
+  "Endocrine (Emergency)": 10,
+  "Neurology (Emergency)": 10,
+  Toxicology: 7,
+  Hematology: 16,
+  "Oncology (Heme)": 16,
+  Rheumatology: 16,
+  "Nuclear Medicine": 6,
+  "Critical Care": 4,
+  "Nephrology (Emergency)": 10,
+};
+
+// Visible in the tracker, but not included in the final exam.
+const FINAL_EXCLUDED = new Set([
+  "Seminar: Patient Safety in Application of RT",
+  "Seminar: Cancer Prevention & Screening",
+  "Seminar: Principles Of Cancer Management",
+  "ICU 2 — Acid-Base Balance",
+  "Leg Length Discrepancy",
+  "Paget's Disease & Other Metabolic Bone Disease",
+  "Limping Child",
+  "Shoulder Pain",
+]);
+const isFinalExcluded = (lecture) => FINAL_EXCLUDED.has(lecture.name);
+
 /* ============================================================================
    EXAM SCHEDULE — as supplied and confirmed by the user directly
    ============================================================================ */
@@ -376,7 +405,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
   const overallPct = totalCells ? Math.round((doneCells / totalCells) * 100) : 0;
   const visible = disciplineLectures.filter((l) => {
     if (examFilter === "mid" && !l.mid) return false;
-    if (examFilter === "finals" && l.mid) return false;
+    if (examFilter === "finals" && (l.mid || isFinalExcluded(l))) return false;
     if (query && !l.name.toLowerCase().includes(query.toLowerCase())) return false;
     return true;
   });
@@ -393,7 +422,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
       const c = cell(l.id);
       const last = lastActivity(l.id);
       lines.push([
-        l.num, l.name, l.section, l.mid ? "MID" : "FINAL",
+        l.num, l.name, l.section, l.mid ? "MID" : (isFinalExcluded(l) ? "REMOVED" : "FINAL"),
         ...STAGES.map((stage) => c[stage.key] ? c[stage.key] : ""),
         isFlagged(l.id) ? "Yes" : "No",
         isStale(l.id) ? "Yes" : "No",
@@ -465,7 +494,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
                     <td className="num-col xp-small-text">{l.num}</td>
                     <td className="lecture-name-cell">{l.name} {stale && <span className="stale-badge" title={"No activity in " + STALE_DAYS + "+ days"}><Clock3 size={10} /></span>}</td>
                     <td className="xp-small-text" style={{ whiteSpace: "nowrap" }}>{l.section}</td>
-                    <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : "exam-pill-finals")}>{l.mid ? "MID" : "FINAL"}</span></td>
+                    <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : (isFinalExcluded(l) ? "exam-pill-removed" : "exam-pill-finals"))} title={isFinalExcluded(l) ? "Not included in the final exam" : undefined}>{l.mid ? "MID" : (isFinalExcluded(l) ? "🚫" : "FINAL")}</span></td>
                     {STAGES.map((s) => <td key={s.key} className="checkbox-cell"><XPCheckbox checked={isDone(l.id, s.key)} onChange={() => toggleStage(l.id, s.key)} /></td>)}
                     <td className="center-cell"><Star size={14} color={isFlagged(l.id) ? "#D6A61A" : "#bbb"} fill={isFlagged(l.id) ? "#D6A61A" : "none"} style={{ cursor: "pointer" }} onClick={() => toggleFlag(l.id)} /></td>
                   </tr>
@@ -489,7 +518,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
                   <span className="section-title">{section}</span>
                   <span className="section-desc">{SECTION_DESC[section] || ""}</span>
                 </span>
-                <span className="xp-small-text section-count">{allInSection.length} items</span>
+                <span className="xp-small-text section-count">{allInSection.length} items</span>{discipline === "Medicine" && MEDICINE_FINAL_MARKS[section] != null && <span className="xp-small-text section-count" title="Final exam mark">Final: {MEDICINE_FINAL_MARKS[section]}</span>}
                 <div className="section-mini-progress"><XPProgress pct={secPct} height={9} /></div>
                 <span className="xp-small-text section-count">{secDone}/{secTotal}</span>
               </div>
@@ -1707,7 +1736,7 @@ const CSS = `
   .exam-row { display:grid; grid-template-columns: 110px 100px 110px 110px 90px 20px; gap:4px; align-items:center; padding:6px 8px; border-bottom:1px solid #EFEDE2; font-size:11px; }
   .exam-row-next { background:#FFF6D9; }
   .exam-row-past { opacity:0.5; }
-  .exam-type-pill { font-size:8.5px; font-weight:bold; padding:1px 5px; border-radius:8px; }
+  .exam-type-pill { font-size:8.5px; font-weight:bold; padding:1px 5px; border-radius:8px; } .exam-pill-removed { background:#eee; color:#b0342b; text-decoration:line-through; }
   .exam-type-cont { background:#DCEBFC; color:#0A46C6; } .exam-type-final { background:#FCE0DC; color:#B0342B; } .exam-type-osce { background:#E6DCFC; color:#5A3A9E; }
   .exam-type-text { font-size:9px; color:#666; margin-top:1px; }
   .exam-countdown-cell strong { display:block; font-size:12px; } .exam-countdown-cell small { font-family:"Courier New",monospace; font-size:9.5px; color:#666; }
