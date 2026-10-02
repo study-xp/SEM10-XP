@@ -533,7 +533,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
                           <td className="num-col xp-small-text">{l.num}</td>
                           <td className="lecture-name-cell">{l.name} {stale && <span className="stale-badge" title={"No activity in " + STALE_DAYS + "+ days"}><Clock3 size={10} /></span>}</td>
                           <td className="center-cell"><span className="type-pill">{l.type}</span></td>
-                          <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : "exam-pill-finals")}>{l.mid ? "MID" : "FINAL"}</span></td>
+                          <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : (isFinalExcluded(l) ? "exam-pill-removed" : "exam-pill-finals"))} title={isFinalExcluded(l) ? "Not included in the final exam" : undefined}>{l.mid ? "MID" : (isFinalExcluded(l) ? "🚫" : "FINAL")}</span></td>
                           {STAGES.map((s) => <td key={s.key} className="checkbox-cell"><XPCheckbox checked={isDone(l.id, s.key)} onChange={() => toggleStage(l.id, s.key)} /></td>)}
                           <td className="center-cell"><Star size={14} color={isFlagged(l.id) ? "#D6A61A" : "#bbb"} fill={isFlagged(l.id) ? "#D6A61A" : "none"} style={{ cursor: "pointer" }} onClick={() => toggleFlag(l.id)} /></td>
                         </tr>
