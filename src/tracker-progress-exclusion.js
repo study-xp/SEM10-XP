@@ -19,6 +19,15 @@
   let observing=true;
  const observer=new MutationObserver(()=>{if(observing)schedule(refresh)});
  observer.observe(document.body,{childList:true,subtree:true});
- addEventListener('storage',e=>{if(e.key===progressKey)schedule(refresh,0)});
- refresh();
+ const safeRefresh=()=>{
+   if(!observing)return;
+   observing=false;
+   observer.disconnect();
+   try{refresh()}finally{
+     observer.observe(document.body,{childList:true,subtree:true});
+     observing=true;
+   }
+ };
+ addEventListener('storage',e=>{if(e.key===progressKey)schedule(safeRefresh,0)});
+ safeRefresh();
 })();
