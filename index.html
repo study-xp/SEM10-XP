@@ -21,6 +21,15 @@
   <body>
     <div id="root"></div>
     <!-- Production build marker: 2026-10-03 -->
+    <script>
+      // Recovery guard: remove stale PWA/service-worker caches after the tracker rollback.
+      // This runs before React so an old cached bundle cannot keep the app on a blank blue shell.
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+          .then(() => "caches" in window ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))) : null)
+          .catch(() => {});
+      }
+    </script>
     <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>
