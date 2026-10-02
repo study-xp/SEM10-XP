@@ -492,7 +492,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
                 return (
                   <tr key={l.id} className={cls(l.mid ? "row-mid" : "row-finals", stale && "row-stale")}>
                     <td className="num-col xp-small-text">{l.num}</td>
-                    <td className="lecture-name-cell">{l.name} {stale && <span className="stale-badge" title={"No activity in " + STALE_DAYS + "+ days"}><Clock3 size={10} /></span>}</td>
+                    <td className="lecture-name-cell">{l.name}{discipline === "Medicine" && MEDICINE_FINAL_MARKS[l.section] != null && !isFinalExcluded(l) && <strong className="lecture-final-mark"> ({MEDICINE_FINAL_MARKS[l.section]} {MEDICINE_FINAL_MARKS[l.section] === 1 ? "mark" : "marks"})</strong>} {stale && <span className="stale-badge" title={"No activity in " + STALE_DAYS + "+ days"}><Clock3 size={10} /></span>}</td>
                     <td className="xp-small-text" style={{ whiteSpace: "nowrap" }}>{l.section}</td>
                     <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : (isFinalExcluded(l) ? "exam-pill-removed" : "exam-pill-finals"))} title={isFinalExcluded(l) ? "Not included in the final exam" : undefined}>{l.mid ? "MID" : (isFinalExcluded(l) ? "🚫" : "FINAL")}</span></td>
                     {STAGES.map((s) => <td key={s.key} className="checkbox-cell"><XPCheckbox checked={isDone(l.id, s.key)} onChange={() => toggleStage(l.id, s.key)} /></td>)}
@@ -1786,7 +1786,7 @@ const CSS = `
   .lecture-table th { font-size:10px; color:#444; padding:4px 3px; background:#F0EEE2; border-bottom:1px solid #D8D5C4; position:sticky; top:0; }
   .lecture-table td { padding: 3px 6px; border-bottom:1px solid #EFEDE2; font-size:11.5px; }
   .num-col { width:28px; text-align:center; color:#888; }
-  .lecture-name-cell { white-space: normal; }
+  .lecture-name-cell { white-space: normal; } .lecture-final-mark { font-weight: bold; color:#111; white-space: nowrap; }
   .checkbox-cell, .center-cell { text-align:center; width:38px; }
   .row-mid { background: #FFF6D9; } .row-finals { background: #FFFFFF; }
   .row-mid:hover, .row-finals:hover { background: #EAF3FF; }
