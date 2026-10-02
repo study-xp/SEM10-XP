@@ -515,7 +515,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
               <div className="section-header" style={{ background: (SECTION_COLORS[section] || "#eee") + "80" }} onClick={() => setOpenSections((o) => ({ ...o, [section]: !o[section] }))}>
                 <span className="section-caret">{openSections[section] ? "▾" : "▸"}</span>
                 <span className="section-title-wrap">
-                  <span className="section-title">{section}</span>
+                  <span className="section-title">{section}{discipline === "Medicine" && MEDICINE_FINAL_MARKS[section] != null ? <span style={{ marginLeft: 7, fontSize: 10, fontWeight: "bold", color: "#0A46C6" }}>({MEDICINE_FINAL_MARKS[section]} marks)</span> : null}</span>
                   <span className="section-desc">{SECTION_DESC[section] || ""}</span>
                 </span>
                 <span className="xp-small-text section-count">{allInSection.length} items</span>{discipline === "Medicine" && MEDICINE_FINAL_MARKS[section] != null && <span className="xp-small-text section-count" title="Final exam mark">Final: {MEDICINE_FINAL_MARKS[section]}</span>}
