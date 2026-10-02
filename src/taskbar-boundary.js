@@ -7,6 +7,6 @@
  addEventListener('resize',schedule);addEventListener('orientationchange',schedule);addEventListener('load',schedule);
  new MutationObserver((mutations)=>{
    if(mutations.some(m=>m.target.closest?.('.xp-window')||m.target.closest?.('.taskbar'))) schedule();
- }).observe(document.documentElement,{subtree:true,childList:true,attributes:true,attributeFilter:['style','class']});
+ }).observe(document.documentElement,{subtree:true,childList:true});
  setTimeout(schedule,0);setTimeout(schedule,250);
 })();
