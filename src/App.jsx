@@ -382,7 +382,6 @@ function XPWindow({ id, title, icon, x, y, w, h, zIndex, minimized, focused, onF
 function TrackerApp({ discipline, progress, setProgress }) {
   const [query, setQuery] = useState("");
   const [examFilter, setExamFilter] = useState("all");
-  const [gradeFilter, setGradeFilter] = useState("all");
   const [grouped, setGrouped] = useState(true);
   const sections = sectionsOf(discipline);
   const [openSections, setOpenSections] = useState(() => { const o = {}; sections.forEach((s) => (o[s] = true)); return o; });
@@ -407,14 +406,6 @@ function TrackerApp({ discipline, progress, setProgress }) {
   const visible = disciplineLectures.filter((l) => {
     if (examFilter === "mid" && !l.mid) return false;
     if (examFilter === "finals" && (l.mid || isFinalExcluded(l))) return false;
-    if (gradeFilter !== "all") {
-      const mark = MEDICINE_FINAL_MARKS[l.section];
-      if (discipline !== "Medicine" || mark == null) return false;
-      if (gradeFilter === "1-5" && (mark < 1 || mark > 5)) return false;
-      if (gradeFilter === "6-10" && (mark < 6 || mark > 10)) return false;
-      if (gradeFilter === "11-15" && (mark < 11 || mark > 15)) return false;
-      if (gradeFilter === "16+" && mark < 16) return false;
-    }
     if (query && !l.name.toLowerCase().includes(query.toLowerCase())) return false;
     return true;
   });
@@ -480,16 +471,6 @@ function TrackerApp({ discipline, progress, setProgress }) {
           <XPButton small active={examFilter === "mid"} onClick={() => setExamFilter("mid")}>Midterm</XPButton>
           <XPButton small active={examFilter === "finals"} onClick={() => setExamFilter("finals")}>Finals-only</XPButton>
         </div>
-        {discipline === "Medicine" && (
-          <div className="row-gap">
-            <span className="xp-small-text">Final marks:</span>
-            <XPButton small active={gradeFilter === "all"} onClick={() => setGradeFilter("all")}>All</XPButton>
-            <XPButton small active={gradeFilter === "1-5"} onClick={() => setGradeFilter("1-5")}>1–5</XPButton>
-            <XPButton small active={gradeFilter === "6-10"} onClick={() => setGradeFilter("6-10")}>6–10</XPButton>
-            <XPButton small active={gradeFilter === "11-15"} onClick={() => setGradeFilter("11-15")}>11–15</XPButton>
-            <XPButton small active={gradeFilter === "16+"} onClick={() => setGradeFilter("16+")}>16+</XPButton>
-          </div>
-        )}
       </div>
       <div className="toolbar">
         <div className="row-gap"><XPButton small onClick={() => expandAll(true)}>Expand all</XPButton><XPButton small onClick={() => expandAll(false)}>Collapse all</XPButton><XPButton small active={grouped} onClick={() => setGrouped((g) => !g)}>{grouped ? "Grouped by dept." : "Flat list"}</XPButton></div>
@@ -552,7 +533,7 @@ function TrackerApp({ discipline, progress, setProgress }) {
                           <td className="num-col xp-small-text">{l.num}</td>
                           <td className="lecture-name-cell">{l.name} {stale && <span className="stale-badge" title={"No activity in " + STALE_DAYS + "+ days"}><Clock3 size={10} /></span>}</td>
                           <td className="center-cell"><span className="type-pill">{l.type}</span></td>
-                          <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : (isFinalExcluded(l) ? "exam-pill-removed" : "exam-pill-finals"))}>{l.mid ? "MID" : (isFinalExcluded(l) ? "🚫" : "FINAL")}</span></td>
+                          <td className="center-cell"><span className={cls("exam-pill", l.mid ? "exam-pill-mid" : "exam-pill-finals")}>{l.mid ? "MID" : "FINAL"}</span></td>
                           {STAGES.map((s) => <td key={s.key} className="checkbox-cell"><XPCheckbox checked={isDone(l.id, s.key)} onChange={() => toggleStage(l.id, s.key)} /></td>)}
                           <td className="center-cell"><Star size={14} color={isFlagged(l.id) ? "#D6A61A" : "#bbb"} fill={isFlagged(l.id) ? "#D6A61A" : "none"} style={{ cursor: "pointer" }} onClick={() => toggleFlag(l.id)} /></td>
                         </tr>
