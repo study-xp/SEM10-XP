@@ -22,14 +22,33 @@
     <div id="root"></div>
     <!-- Production build marker: 2026-10-03 -->
     <script>
-      // Recovery guard: remove stale PWA/service-worker caches after the tracker rollback.
-      // This runs before React so an old cached bundle cannot keep the app on a blank blue shell.
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.getRegistrations().then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
+      // One-time recovery: clear any older SEM10-XP PWA controller/cache before React loads.
+      // The old guard ran cleanup asynchronously while main.jsx was already starting.
+      (() => {
+        const RECOVERY_KEY = "sem10xp:boot-recovery-20261003";
+        const loadApp = () => {
+          const s = document.createElement("script");
+          s.type = "module";
+          s.src = "./src/main.jsx";
+          document.body.appendChild(s);
+        };
+        let recovered = false;
+        try { recovered = sessionStorage.getItem(RECOVERY_KEY) === "1"; } catch (_) {}
+        if (recovered) {
+          loadApp();
+          return;
+        }
+        try { sessionStorage.setItem(RECOVERY_KEY, "1"); } catch (_) {}
+        if (!("serviceWorker" in navigator)) {
+          loadApp();
+          return;
+        }
+        navigator.serviceWorker.getRegistrations()
+          .then((regs) => Promise.all(regs.map((reg) => reg.unregister())))
           .then(() => "caches" in window ? caches.keys().then((keys) => Promise.all(keys.map((key) => caches.delete(key)))) : null)
-          .catch(() => {});
-      }
+          .then(() => location.reload())
+          .catch(() => loadApp());
+      })();
     </script>
-    <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>
